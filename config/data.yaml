@@ -1,0 +1,17 @@
+default_provider: joinquant
+
+storage:
+  format: parquet
+
+providers:
+  joinquant:
+    base_dir: /share/quant/data/jukuan
+    username: "<your_jq_username>"
+    password: "<your_jq_password>"
+    timezone: Asia/Shanghai
+    throttle:
+      max_per_minute: 50
+      burst: 5
+    retry:
+      max_attempts: 3
+      backoff_seconds: 1.0

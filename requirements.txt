@@ -1,3 +1,6 @@
 pandas>=2.2.0
 numpy>=1.26.0
 mcp>=0.1.0
+pyarrow>=14.0.0
+pyyaml>=6.0.0
+jqdatasdk>=1.9.2

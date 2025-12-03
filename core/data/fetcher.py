@@ -123,11 +123,12 @@ class MarketFetcher:
         existing_dates = pd.Index([])
         if not existing.empty and "timestamp" in existing:
             ts = pd.to_datetime(existing["timestamp"])
-            if ts.tz is None:
-                ts = ts.tz_localize("UTC")
+            tz = getattr(ts.dt, "tz", None)
+            if tz is None:
+                ts = ts.dt.tz_localize("UTC")
             else:
-                ts = ts.tz_convert("UTC")
-            existing_dates = ts.normalize()
+                ts = ts.dt.tz_convert("UTC")
+            existing_dates = ts.dt.normalize()
         expected_dates = trade_days.normalize()
         missing = sorted(set(expected_dates) - set(existing_dates))
         return list(missing)

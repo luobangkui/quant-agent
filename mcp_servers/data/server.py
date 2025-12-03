@@ -22,7 +22,13 @@ from core.data.providers.joinquant import JoinQuantProvider
 from core.data.storage import LocalParquetStore
 
 logger = logging.getLogger(__name__)
-mcp = FastMCP("data-service")
+
+# Default host/port can be overridden via args or ENV
+DEFAULT_HOST = os.getenv("HOST", "127.0.0.1")
+DEFAULT_PORT = int(os.getenv("PORT", "50001"))
+
+# Instantiate MCP server (host/port may be overwritten in main before run)
+mcp = FastMCP("data-service", host=DEFAULT_HOST, port=DEFAULT_PORT)
 
 
 def get_fetcher(config_path: Path) -> MarketFetcher:
@@ -172,12 +178,22 @@ def list_cached_symbols(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="MCP data service")
-    parser.add_argument("--port", type=int, default=int(os.getenv("PORT", "50001")), help="MCP server port")
-    parser.add_argument("--host", default=os.getenv("HOST", "127.0.0.1"), help="MCP server host")
+    parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="MCP server port")
+    parser.add_argument("--host", default=DEFAULT_HOST, help="MCP server host")
+    parser.add_argument(
+        "--transport",
+        default="streamable-http",
+        choices=["stdio", "sse", "streamable-http"],
+        help="Transport for MCP server",
+    )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
     logging.basicConfig(level="INFO", format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
-    mcp.run(host=args.host, port=args.port)
+    # Override host/port before starting server (used by SSE/HTTP transports)
+    mcp.settings.host = args.host
+    mcp.settings.port = args.port
+    logger.info("Starting MCP data-service on %s:%s via %s", args.host, args.port, args.transport)
+    mcp.run(transport=args.transport)

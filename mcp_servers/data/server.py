@@ -24,7 +24,7 @@ from core.data.storage import LocalParquetStore
 logger = logging.getLogger(__name__)
 
 # Default host/port can be overridden via args or ENV
-DEFAULT_HOST = os.getenv("HOST", "127.0.0.1")
+DEFAULT_HOST = os.getenv("HOST", "0.0.0.0")
 DEFAULT_PORT = int(os.getenv("PORT", "50001"))
 
 # Instantiate MCP server (host/port may be overwritten in main before run)

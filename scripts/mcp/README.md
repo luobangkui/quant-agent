@@ -3,7 +3,7 @@
 ## 数据域（data-service）
 - 启动：`scripts/mcp/start_data_server.sh`
 - 环境变量：
-  - `HOST`（默认 127.0.0.1）
+  - `HOST`（默认 0.0.0.0，方便外部访问）
   - `PORT`（默认 50001，对应数据域 MCP）
   - `LOG_DIR`（默认仓库根目录下的 `logs/`）
   - `TRANSPORT`（默认 `sse`，可选 `stdio`/`sse`/`streamable-http`）

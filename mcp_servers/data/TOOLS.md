@@ -36,7 +36,25 @@
   - `config_path: string` 默认 `config/data.yaml`
 - 返回：文本列出标的（受 limit 限制）。
 
+### `fetch_universe_prices`
+- 功能：自动获取指定类型的标的列表（默认 stock，前 50 个），再批量拉取行情，支持本地缓存。
+- 参数：
+  - `start/end: string`（必填）
+  - `types: string[]` 默认 `["stock"]`
+  - `limit: int` 默认 50
+  - `use_cache: bool` 默认 `true`，先用本地标的缓存
+  - `refresh: bool` 默认 `false`，强制刷新标的列表
+  - 其余同 `fetch_prices`（`freq/full_refresh/config_path/log_level`）
+- 返回：同 `fetch_prices` 的汇总。
+
+### `list_securities`
+- 功能：获取标的列表（默认 stock，前 50），优先本地缓存，可强制刷新。
+- 参数：`types: string[]`，`limit: int`，`config_path: string`，`refresh: bool`（是否强制远端刷新）
+- 返回：标的代码列表（文本）。
+
 ## 示例调用
 - 拉取：`fetch_prices` `{ symbols:["000001.XSHE","600000.XSHG"], start:"2015-01-01", end:"2024-12-31", freq:"1d" }`
 - 检查：`check_cache` `{ symbol:"000001.XSHE", freq:"1d" }`
 - 列表：`list_cached_symbols` `{ freq:"1d", limit:20 }`
+- 自动获取前 N 个标的并拉取：`fetch_universe_prices` `{ start:"2025-01-01", end:"2025-12-31", types:["stock"], limit:50, freq:"1d" }`
+- 仅获取标的列表：`list_securities` `{ types:["stock"], limit:50 }`

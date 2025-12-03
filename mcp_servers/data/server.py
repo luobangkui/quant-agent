@@ -19,6 +19,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from core.data.config import build_provider_config, load_raw_config
 from core.data.fetcher import FetchResult, MarketFetcher
 from core.data.providers.joinquant import JoinQuantProvider
+from core.data.securities import SecuritiesCache
 from core.data.storage import LocalParquetStore
 
 logger = logging.getLogger(__name__)
@@ -59,8 +60,16 @@ def _result_log(results: Iterable[FetchResult]) -> str:
             status = f"error: {r.error}"
         lines.append(
             f"- {r.symbol}: rows={r.fetched_rows} missing_ranges={r.missing_ranges} status={status}"
-        )
+    )
     return "\n".join(lines)
+
+
+def _list_securities(provider, types: Optional[List[str]] = None) -> pd.DataFrame:
+    try:
+        return provider.list_securities(types=types)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Failed to list securities")
+        raise exc
 
 
 @mcp.tool()
@@ -99,6 +108,78 @@ def fetch_prices(
         use_missing_ranges=not full_refresh,
     )
     return [TextContent(type="text", text=_result_log(results))]
+
+
+@mcp.tool()
+def fetch_universe_prices(
+    start: str,
+    end: str,
+    types: Optional[List[str]] = None,
+    limit: int = 50,
+    freq: str = "1d",
+    full_refresh: bool = False,
+    config_path: str = "config/data.yaml",
+    log_level: str = "INFO",
+    use_cache: bool = True,
+    refresh: bool = False,
+) -> List[TextContent]:
+    """拉取指定类型标的（自动获取列表，默认前 50 个）行情并落盘。"""
+    logging.basicConfig(level=log_level.upper(), format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
+    fetcher = get_fetcher(Path(config_path))
+    provider = fetcher.provider
+    cache = SecuritiesCache(provider.config.base_dir, provider.name)
+    df_sec = cache.load() if use_cache and not refresh else pd.DataFrame()
+    if df_sec.empty:
+        df_sec = _list_securities(provider, types=types)
+        if not df_sec.empty and use_cache:
+            cache.save(df_sec)
+    if df_sec.empty:
+        raise ValueError("未获取到标的列表")
+    symbols = df_sec["symbol"].tolist()[:limit]
+    logger.info(
+        "Fetching universe symbols (types=%s, limit=%s): %s...",
+        types or "stock",
+        limit,
+        symbols[:5],
+    )
+    start_ts = _parse_ts(start)
+    end_ts = _parse_ts(end)
+    results = fetcher.fetch_symbols(
+        symbols,
+        start_ts,
+        end_ts,
+        freq=freq,
+        use_missing_ranges=not full_refresh,
+    )
+    return [TextContent(type="text", text=_result_log(results))]
+
+
+@mcp.tool()
+def list_securities(
+    types: Optional[List[str]] = None,
+    limit: int = 50,
+    config_path: str = "config/data.yaml",
+    refresh: bool = False,
+) -> List[TextContent]:
+    """列出标的列表（默认前 50 个），优先本地缓存，可强制刷新远端。"""
+    fetcher = get_fetcher(Path(config_path))
+    provider = fetcher.provider
+    cache = SecuritiesCache(provider.config.base_dir, provider.name)
+    df_sec = cache.load()
+    if df_sec.empty or refresh:
+        logger.info("Refreshing securities cache (types=%s)", types or ["stock"])
+        df_sec = _list_securities(provider, types=types)
+        if not df_sec.empty:
+            cache.save(df_sec)
+    if df_sec.empty:
+        return [TextContent(type="text", text="No securities returned")]
+    symbols = df_sec["symbol"].tolist()[:limit]
+    return [
+        TextContent(
+            type="text",
+            text=f"Securities (types={types or 'stock'}, limit={limit}):\n" + "\n".join(f"- {s}" for s in symbols),
+        )
+    ]
 
 
 @mcp.tool()

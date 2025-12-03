@@ -182,7 +182,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--host", default=DEFAULT_HOST, help="MCP server host")
     parser.add_argument(
         "--transport",
-        default="streamable-http",
+        default="sse",
         choices=["stdio", "sse", "streamable-http"],
         help="Transport for MCP server",
     )

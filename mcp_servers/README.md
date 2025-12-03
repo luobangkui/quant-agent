@@ -12,6 +12,7 @@
 后续新增服务（如策略/回测/通知）请在此处登记端口与简介，并在对应子目录编写 `TOOLS.md`。
 
 ## 启动脚本
-- 数据域：`scripts/mcp/start_data_server.sh`（可用 HOST/PORT/TRANSPORT 环境变量覆盖，默认 127.0.0.1:50001，transport=streamable-http）
-  - 等价命令：`python mcp_servers/data/server.py --host 127.0.0.1 --port 50001 --transport streamable-http`
+- 数据域：`scripts/mcp/start_data_server.sh`（可用 HOST/PORT/TRANSPORT 环境变量覆盖，默认 127.0.0.1:50001，transport=sse）
+  - SSE 端点：事件流 `/sse`，消息接口 `/messages/`
+  - 等价命令：`python mcp_servers/data/server.py --host 127.0.0.1 --port 50001 --transport sse`
   - 在 MCP 客户端配置时，将 host/port 指向运行中的进程。

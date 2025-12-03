@@ -28,8 +28,12 @@ class TradingCalendarCache:
                 end.date(),
                 self.path,
             )
-            fetched = loader(start, end)
-            fetched_idx = self._to_index(fetched)
+            try:
+                fetched = loader(start, end)
+                fetched_idx = self._to_index(fetched)
+            except Exception as exc:  # noqa: BLE001
+                logger.exception("Failed to fetch trading calendar from provider for %s -> %s", start, end)
+                raise exc
             if cal is None or cal.empty:
                 cal = fetched_idx
             else:
@@ -47,8 +51,11 @@ class TradingCalendarCache:
         if self.path.exists():
             df = pd.read_parquet(self.path)
             if "date" in df:
-                self._calendar = self._to_index(df["date"])
-                return self._calendar
+                try:
+                    self._calendar = self._to_index(df["date"])
+                    return self._calendar
+                except Exception:  # noqa: BLE001
+                    logger.exception("Failed to load cached calendar %s, will refetch", self.path)
         return pd.DatetimeIndex([], tz="UTC")
 
     def _save(self, calendar: pd.DatetimeIndex) -> None:
@@ -59,7 +66,9 @@ class TradingCalendarCache:
 
     @staticmethod
     def _to_index(values) -> pd.DatetimeIndex:
-        idx = pd.to_datetime(values)
+        idx = pd.to_datetime(values, errors="coerce")
+        if isinstance(idx, pd.Series):
+            idx = pd.DatetimeIndex(idx)
         if idx.tz is None:
             idx = idx.tz_localize("UTC")
         else:

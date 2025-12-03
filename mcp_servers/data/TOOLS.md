@@ -44,6 +44,7 @@
   - `limit: int` 默认 50
   - `use_cache: bool` 默认 `true`，先用本地标的缓存
   - `refresh: bool` 默认 `false`，强制刷新标的列表
+  - `index_symbol: string` 可选，如 `"000300.XSHG"` 直接取指数成份（limit 可控制数量）
   - 其余同 `fetch_prices`（`freq/full_refresh/config_path/log_level`）
 - 返回：同 `fetch_prices` 的汇总。
 

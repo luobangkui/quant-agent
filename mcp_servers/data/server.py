@@ -72,6 +72,18 @@ def _list_securities(provider, types: Optional[List[str]] = None) -> pd.DataFram
         raise exc
 
 
+def _get_index_constituents(provider, index_symbol: str) -> List[str]:
+    try:
+        # 聚宽指数成份
+        if hasattr(provider._client, "get_index_stocks"):
+            return provider._client.get_index_stocks(index_symbol)
+        # 兜底
+        raise ValueError("Provider does not support get_index_stocks")
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Failed to get index constituents for %s", index_symbol)
+        raise exc
+
+
 @mcp.tool()
 def fetch_prices(
     symbols: List[str],
@@ -122,23 +134,31 @@ def fetch_universe_prices(
     log_level: str = "INFO",
     use_cache: bool = True,
     refresh: bool = False,
+    index_symbol: Optional[str] = None,
 ) -> List[TextContent]:
     """拉取指定类型标的（自动获取列表，默认前 50 个）行情并落盘。"""
     logging.basicConfig(level=log_level.upper(), format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
     fetcher = get_fetcher(Path(config_path))
     provider = fetcher.provider
-    cache = SecuritiesCache(provider.config.base_dir, provider.name)
-    df_sec = cache.load() if use_cache and not refresh else pd.DataFrame()
-    if df_sec.empty:
-        df_sec = _list_securities(provider, types=types)
-        if not df_sec.empty and use_cache:
-            cache.save(df_sec)
-    if df_sec.empty:
-        raise ValueError("未获取到标的列表")
-    symbols = df_sec["symbol"].tolist()[:limit]
+    if index_symbol:
+        symbols = _get_index_constituents(provider, index_symbol)
+        if not symbols:
+            raise ValueError(f"未获取到指数成份: {index_symbol}")
+        symbols = symbols[:limit] if limit else symbols
+    else:
+        cache = SecuritiesCache(provider.config.base_dir, provider.name)
+        df_sec = cache.load() if use_cache and not refresh else pd.DataFrame()
+        if df_sec.empty:
+            df_sec = _list_securities(provider, types=types)
+            if not df_sec.empty and use_cache:
+                cache.save(df_sec)
+        if df_sec.empty:
+            raise ValueError("未获取到标的列表")
+        symbols = df_sec["symbol"].tolist()[:limit]
     logger.info(
-        "Fetching universe symbols (types=%s, limit=%s): %s...",
+        "Fetching universe symbols (types=%s, index=%s, limit=%s): %s...",
         types or "stock",
+        index_symbol or "",
         limit,
         symbols[:5],
     )

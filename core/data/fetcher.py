@@ -50,15 +50,24 @@ class MarketFetcher:
         end_utc = self._to_utc(end)
 
         freq_norm = freq.lower()
-        trade_days = self._get_trade_days(start_utc, end_utc)
+        try:
+            trade_days = self._get_trade_days(start_utc, end_utc)
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("Failed to load trading days for %s -> %s", start_utc, end_utc)
+            return FetchResult(symbol=symbol, fetched_rows=0, missing_ranges=0, error=str(exc))
         if trade_days.empty:
             logger.info("No trading days for %s in range %s -> %s, skipping", symbol, start_utc.date(), end_utc.date())
             return FetchResult(symbol=symbol, fetched_rows=0, missing_ranges=0, skipped=True)
 
         if freq_norm in ("1d", "d", "day", "daily"):
-            missing_dates = (
-                self._missing_trade_dates(symbol, trade_days) if use_missing_ranges else list(trade_days)
-            )
+            try:
+                missing_dates = (
+                    self._missing_trade_dates(symbol, trade_days) if use_missing_ranges else list(trade_days)
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.exception("Failed to compute missing dates for %s", symbol)
+                return FetchResult(symbol=symbol, fetched_rows=0, missing_ranges=0, error=str(exc))
+
             if not missing_dates:
                 logger.info("No missing dates for %s (freq=%s), skipping", symbol, freq_norm)
                 return FetchResult(symbol=symbol, fetched_rows=0, missing_ranges=0, skipped=True)
@@ -92,7 +101,7 @@ class MarketFetcher:
                 fetched_rows += len(df)
             return FetchResult(symbol=symbol, fetched_rows=fetched_rows, missing_ranges=missing_count)
         except Exception as exc:  # noqa: BLE001
-            logger.exception("Fetch failed for %s %s", symbol, freq_norm)
+            logger.exception("Fetch failed for %s %s ranges=%s", symbol, freq_norm, ranges)
             return FetchResult(symbol=symbol, fetched_rows=fetched_rows, missing_ranges=missing_count, error=str(exc))
 
     def fetch_symbols(
@@ -123,8 +132,7 @@ class MarketFetcher:
         existing_dates = pd.Index([])
         if not existing.empty and "timestamp" in existing:
             ts = pd.to_datetime(existing["timestamp"])
-            tz = getattr(ts.dt, "tz", None)
-            if tz is None:
+            if ts.dt.tz is None:
                 ts = ts.dt.tz_localize("UTC")
             else:
                 ts = ts.dt.tz_convert("UTC")

@@ -12,4 +12,9 @@ LOG_FILE="${LOG_DIR}/data_server_${PORT}.log"
 TRANSPORT="${TRANSPORT:-sse}"
 
 echo "Starting data MCP server on ${HOST}:${PORT} (transport=${TRANSPORT}), logs -> ${LOG_FILE}"
-python mcp_servers/data/server.py --host "${HOST}" --port "${PORT}" --transport "${TRANSPORT}" 2>&1 | tee -a "${LOG_FILE}"
+python mcp_servers/data/server.py --host "${HOST}" --port "${PORT}" --transport "${TRANSPORT}" \
+  > >(tee -a "${LOG_FILE}") 2>&1 &
+PY_PID=$!
+
+trap 'kill ${PY_PID} 2>/dev/null; exit 0' INT TERM
+wait ${PY_PID}

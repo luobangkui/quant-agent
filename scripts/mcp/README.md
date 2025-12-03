@@ -9,5 +9,6 @@
   - `TRANSPORT`（默认 `sse`，可选 `stdio`/`sse`/`streamable-http`）
 - 脚本会切换到仓库根目录，然后执行 `python mcp_servers/data/server.py`。
   - 日志自动写入 `LOG_DIR` 下的 `data_server_<port>.log`，同时输出到控制台。
+  - Ctrl+C 可结束服务（脚本会向子进程转发信号）；也可手动 `kill <PID>`。
 
 > 其他域的 MCP 服务可按此模式添加新的启动脚本（如 `start_strategy_server.sh`）并在此文件补充说明。

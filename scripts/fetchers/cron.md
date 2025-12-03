@@ -26,3 +26,17 @@ python scripts/fetchers/daily_job.py
 - 账号/密码敏感信息不要写入 cron；可在环境变量或 `config/data.yaml` 提前配置好。
 - 如需交易日历刷新或标的列表刷新，可定期手动运行一次带 `refresh` 的工具（或扩展脚本参数）。
 - 运行失败请检查 `logs/daily_job.log` 与数据服务日志；限流/配额不足时可增加重试逻辑。
+
+## 沪深300 专用每日任务
+- 脚本：`scripts/fetchers/daily_hs300.py`（默认取昨日，指数 `000300.XSHG`，limit=300）
+- 手动：
+  ```
+  python scripts/fetchers/daily_hs300.py  # 默认昨日
+  # 指定日期
+  python scripts/fetchers/daily_hs300.py --date 2025-01-10
+  ```
+- cron 示例：
+  ```
+  5 0 * * * cd /personal/my-proj/quant-agent && /path/to/python scripts/fetchers/daily_hs300.py >> logs/daily_hs300.log 2>&1
+  ```
+  可与全市场任务错开几分钟，减少并发压力。

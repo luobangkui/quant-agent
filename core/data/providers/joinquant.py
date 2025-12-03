@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import time
 from datetime import datetime
 from typing import Optional, Sequence
@@ -8,6 +9,7 @@ import pandas as pd
 
 from core.data.provider import DataProvider, ProviderConfig
 
+logger = logging.getLogger(__name__)
 
 class JoinQuantProvider(DataProvider):
     """JoinQuant (JQData) provider adapter."""
@@ -34,6 +36,7 @@ class JoinQuantProvider(DataProvider):
         if not self.config.username or not self.config.password:
             raise ValueError("JoinQuant 配置缺少用户名/密码")
         self._client.auth(self.config.username, self.config.password)
+        logger.info("Authenticated JoinQuant user=%s", self.config.username)
 
     def _throttle(self) -> None:
         if self._min_interval <= 0:

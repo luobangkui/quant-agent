@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Iterable, List, Optional, Sequence
 
@@ -8,6 +9,8 @@ import pandas as pd
 from core.data.calendar import TradingCalendarCache
 from core.data.provider import DataProvider
 from core.data.storage import LocalParquetStore
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -49,6 +52,7 @@ class MarketFetcher:
         freq_norm = freq.lower()
         trade_days = self._get_trade_days(start_utc, end_utc)
         if trade_days.empty:
+            logger.info("No trading days for %s in range %s -> %s, skipping", symbol, start_utc.date(), end_utc.date())
             return FetchResult(symbol=symbol, fetched_rows=0, missing_ranges=0, skipped=True)
 
         if freq_norm in ("1d", "d", "day", "daily"):
@@ -56,6 +60,7 @@ class MarketFetcher:
                 self._missing_trade_dates(symbol, trade_days) if use_missing_ranges else list(trade_days)
             )
             if not missing_dates:
+                logger.info("No missing dates for %s (freq=%s), skipping", symbol, freq_norm)
                 return FetchResult(symbol=symbol, fetched_rows=0, missing_ranges=0, skipped=True)
             ranges = self._chunk_dates(missing_dates, self.chunk_days)
         else:
@@ -67,6 +72,13 @@ class MarketFetcher:
         fetched_rows = 0
         try:
             for r_start, r_end in ranges:
+                logger.info(
+                    "Fetching %s %s range %s -> %s",
+                    symbol,
+                    freq_norm,
+                    r_start.date(),
+                    r_end.date(),
+                )
                 df = self.provider.get_price(
                     symbol,
                     start=r_start.to_pydatetime(),
@@ -74,11 +86,13 @@ class MarketFetcher:
                     freq=freq,
                 )
                 if df.empty:
+                    logger.info("Empty result for %s %s range %s -> %s", symbol, freq_norm, r_start.date(), r_end.date())
                     continue
                 self.store.upsert(symbol, freq_norm, df)
                 fetched_rows += len(df)
             return FetchResult(symbol=symbol, fetched_rows=fetched_rows, missing_ranges=missing_count)
         except Exception as exc:  # noqa: BLE001
+            logger.exception("Fetch failed for %s %s", symbol, freq_norm)
             return FetchResult(symbol=symbol, fetched_rows=fetched_rows, missing_ranges=missing_count, error=str(exc))
 
     def fetch_symbols(

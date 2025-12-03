@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from typing import List
 
+import logging
 import pandas as pd
 
 # Ensure project root on path
@@ -31,6 +32,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--chunk-days", type=int, default=366, help="日线分片天数")
     parser.add_argument("--chunk-minutes", type=int, default=3 * 24 * 60, help="分钟线分片分钟数")
     parser.add_argument("--full-refresh", action="store_true", help="忽略缺口，直接按区间全量拉取")
+    parser.add_argument("--log-level", default="INFO", help="日志级别，默认 INFO")
     return parser.parse_args()
 
 
@@ -63,6 +65,10 @@ def resolve_symbols(fetcher: MarketFetcher, args: argparse.Namespace) -> List[st
 
 def main() -> None:
     args = parse_args()
+    logging.basicConfig(
+        level=args.log_level.upper(),
+        format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    )
     fetcher = build_fetcher(args)
     symbols = resolve_symbols(fetcher, args)
     start_ts = pd.Timestamp(args.start)

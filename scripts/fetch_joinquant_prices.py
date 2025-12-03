@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import logging
 import pandas as pd
 
 from core.data.config import build_provider_config, load_raw_config
@@ -18,11 +19,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--end", required=True, help="结束日期，形如 2024-12-31")
     parser.add_argument("--freq", default="1d", help="频率：1d 或 1m")
     parser.add_argument("--config", type=Path, default=Path("config/data.yaml"), help="配置文件路径")
+    parser.add_argument("--log-level", default="INFO", help="日志级别，默认 INFO")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
+    logging.basicConfig(
+        level=args.log_level.upper(),
+        format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    )
     raw_cfg = load_raw_config(args.config)
     provider_name = raw_cfg.get("default_provider", "joinquant")
     provider_cfg = build_provider_config(raw_cfg, provider_name)

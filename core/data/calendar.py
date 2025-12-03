@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 class TradingCalendarCache:
@@ -19,6 +22,12 @@ class TradingCalendarCache:
         cal = self._load()
 
         if cal is None or cal.empty or start < cal.min() or end > cal.max():
+            logger.info(
+                "Refreshing trading calendar cache for %s -> %s (provider cache=%s)",
+                start.date(),
+                end.date(),
+                self.path,
+            )
             fetched = loader(start, end)
             fetched_idx = self._to_index(fetched)
             if cal is None or cal.empty:
